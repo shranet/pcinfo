@@ -31,12 +31,11 @@ qoidalari (Docker, git push) bundan ustun.
 ## 2. Stek
 
 - **Go** (Docker image `golang:1.26.10`), statik binary: `CGO_ENABLED=0`.
-- Tasdiqlangan kutubxonalar (D-001):
-  - `charm.land/bubbletea/v2`, `charm.land/lipgloss/v2`, `charm.land/bubbles/v2` — TUI;
-  - `github.com/lrstanley/bubblezone` — sichqoncha zonalari;
-  - `github.com/NimbleMarkets/ntcharts` — sparkline va grafiklar;
-  - `github.com/shirou/gopsutil/v4` — tizim ma'lumotlari;
-  - `github.com/docker/docker/client` — Docker API.
+- Ishlatilayotgan kutubxonalar (D-001, D-001a):
+  - `charm.land/bubbletea/v2`, `charm.land/lipgloss/v2` (va ularning `x/ansi`) — TUI;
+  - `github.com/shirou/gopsutil/v4` — tizim ma'lumotlari.
+- Docker API — standart `net/http`, faqat GET. Sichqoncha zonalari, jadval, sparkline —
+  `internal/tui/widgets.go`.
 - Boshqa har qanday kutubxona faqat asoslab va foydalanuvchidan so'rab qo'shiladi.
   Avval standart kutubxona: log `log/slog`, testlar `testing` (assert kutubxonasisiz).
   Linux ma'lumotini `/proc` va `/sys` dan o'qish kutubxonadan afzal, agar u
@@ -49,7 +48,7 @@ cmd/pcinfo/            kirish nuqtasi: flaglar, rejim tanlash (tui | collect), b
 internal/collect/<x>/  kollektorlar, har biri bitta domen: system, process, docker,
                        projects, network, modem. Natija — oddiy struct, UI'siz.
 internal/snapshot/     kollektorlarni yig'adi; claude tomoni bilan JSON kontrakti
-internal/privileged/   `sudo -n -u claude pcinfo collect --json` ni chaqirish va javobni tekshirish
+internal/privileged/   `sudo -n -u claude -- /usr/local/bin/pcinfo collect --json` ni chaqirish va javobni tekshirish
 internal/tui/          Bubble Tea modeli, tablar (har tab o'z faylida/paketida)
 internal/tui/theme/    ranglar va stillar — yagona manba
 docs/                  spec.md, decisions.md
@@ -89,8 +88,8 @@ docs/                  spec.md, decisions.md
   tekshiriladi.
 - **Maxfiylik:** `.env`, kalitlar, compose `environment` qiymatlari o'qilmaydi va
   ko'rsatilmaydi (faqat nomlari kerak bo'lsa). Modem cookie/token logga tushmaydi.
-- **Modem:** bir vaqtda bitta USSD (`flock`), ~5 daqiqada ko'pi bilan bir marta
-  (natija keshi `/run/user/<uid>/pcinfo/`). Batafsil — spec.
+- **Modem:** bir vaqtda bitta USSD (abstract socket lock, diskka yozmasdan), bitta
+  jarayonda 5 daqiqada ko'pi bilan bir marta (D-006).
 - **Imtiyozlar:** TUI shranet sifatida ishlaydi; claude tomoni faqat
   `collect` rejimi orqali, faqat o'qiydi, hech narsani o'zgartirmaydi.
   O'rnatilgan binary `root:root 0755` (claude yoza olmasin) — D-003.
@@ -102,7 +101,7 @@ docs/                  spec.md, decisions.md
 - Xato qaytariladi yoki ishlanadi, yutib yuborilmaydi; `fmt.Errorf("…: %w", err)`
   bilan kontekst qo'shiladi, tekshirish `errors.Is/As` bilan.
 - UI'da xato qisqa va tushunarli matn bilan; ichki tafsilot (stack, to'liq yo'l)
-  faqat debug logda (`--log` flag bilan fayl, standart holatda log yo'q).
+  ko'rsatilmaydi. Log fayl yo'q: dastur diskka hech narsa yozmaydi (D-007).
 
 ## 7. Nomlash va izohlar
 
