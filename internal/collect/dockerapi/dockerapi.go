@@ -31,7 +31,8 @@ const (
 	requestTimeout   = 5 * time.Second
 	statsTimeout     = 8 * time.Second
 	maxResponseBytes = 8 << 20
-	statsConcurrency = 8
+	// stream=false har konteynerda ~1 s kutadi (CPU farqi uchun), shuning uchun keng parallel.
+	statsConcurrency = 32
 
 	labelComposeProject    = "com.docker.compose.project"
 	labelComposeService    = "com.docker.compose.service"
