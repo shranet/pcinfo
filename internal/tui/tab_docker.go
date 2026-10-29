@@ -118,7 +118,7 @@ func (m Model) viewDocker() []string {
 	case len(rows) == 0:
 		msg := "Ochiq Docker topilmadi"
 		if m.claude.err != nil {
-			msg += " (claude tomoni: " + m.claude.err.Error() + ")"
+			msg += " (claude tomoni: " + errText(m.claude.err) + ")"
 		}
 		return append(lines, theme.Muted.Render(msg))
 	}

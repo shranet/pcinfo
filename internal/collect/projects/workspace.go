@@ -30,6 +30,8 @@ const (
 	// gitBinary — PATH orqali emas, aniq yo'l: PATH almashtirilsa ham boshqa dastur ishlamaydi.
 	gitBinary  = "/usr/bin/git"
 	gitTimeout = 5 * time.Second
+	// emptyTreeHash — git'ning har repoda mavjud bo'sh daraxt obyekti (SHA-1).
+	emptyTreeHash = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 )
 
 // skippedDirs — repo qidirishda kirilmaydigan papkalar.
@@ -185,7 +187,8 @@ func imageTag(ref string) string {
 
 // gitStatus repo holatini faqat o'qib oladi. --no-optional-locks va
 // GIT_OPTIONAL_LOCKS=0 — `git status` indeksni yangilab yozmasligi uchun;
-// fsmonitor o'chiq — repo konfiguratsiyasidagi tashqi dastur ishga tushmasin.
+// fsmonitor, submodule, filtr va lazy fetch o'chiq — repo konfiguratsiyasidagi tashqi
+// dastur ishga tushmasin va hech narsa yozilmasin.
 func gitStatus(ctx context.Context, dir, rel string) Repo {
 	repo := Repo{Path: rel}
 	ctx, cancel := context.WithTimeout(ctx, gitTimeout)
@@ -194,8 +197,9 @@ func gitStatus(ctx context.Context, dir, rel string) Repo {
 		"-C", dir,
 		"-c", "core.fsmonitor=false",
 		"-c", "core.untrackedCache=false",
+		"-c", "status.submoduleSummary=false",
 		"--no-optional-locks",
-		"status", "--porcelain=v2", "--branch")
+		"status", "--porcelain=v2", "--branch", "--ignore-submodules=all")
 	cmd.Env = gitEnv()
 	var out bytes.Buffer
 	cmd.Stdout = &limitedWriter{w: &out, remaining: maxGitOutput}
@@ -213,6 +217,11 @@ func gitEnv() []string {
 		"LC_ALL=C",
 		"GIT_OPTIONAL_LOCKS=0",
 		"GIT_TERMINAL_PROMPT=0",
+		// Partial clone'da yetishmagan obyektlarni tarmoqdan olib yozmasin.
+		"GIT_NO_LAZY_FETCH=1",
+		"GIT_CONFIG_NOSYSTEM=1",
+		// .gitattributes bo'sh daraxtdan o'qiladi: repo'dagi clean/process filtrlar ishga tushmaydi.
+		"GIT_ATTR_SOURCE=" + emptyTreeHash,
 	}
 	if home, err := os.UserHomeDir(); err == nil {
 		env = append(env, "HOME="+home)

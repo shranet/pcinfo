@@ -5,11 +5,12 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -30,9 +31,10 @@ const (
 	ussdStatusReady = "0"
 	ussdSendOK      = "OK"
 
-	// ussdLockName — Linux abstract unix socket: diskka hech narsa yozmasdan
-	// bir vaqtda faqat bitta USSD bo'lishini ta'minlaydi (oldingisini bekor qilmaslik uchun).
-	ussdLockName = "@pcinfo-ussd-lock"
+	// runtimeDirFmt — foydalanuvchining shaxsiy (0700) papkasi; lock shu papkaning o'ziga
+	// flock bilan qo'yiladi: diskka hech narsa yozilmaydi va boshqa foydalanuvchi uni band
+	// qila olmaydi (umumiy abstract socket'ni esa istalgan foydalanuvchi egallab olishi mumkin edi).
+	runtimeDirFmt = "/run/user/%d"
 )
 
 var (
@@ -78,11 +80,11 @@ func (c *Client) USSD(ctx context.Context, code string, report func(Progress)) (
 	if !ussdCodePattern.MatchString(code) {
 		return Balance{}, fmt.Errorf("noto'g'ri USSD kod %q", code)
 	}
-	lock, err := net.Listen("unix", ussdLockName)
+	unlock, err := lockUSSD()
 	if err != nil {
-		return Balance{}, ErrBusy
+		return Balance{}, err
 	}
-	defer lock.Close()
+	defer unlock()
 
 	notify := func(p Progress) {
 		if report != nil {
@@ -200,4 +202,29 @@ func firstInt(re *regexp.Regexp, s string) *int64 {
 		return nil
 	}
 	return &n
+}
+
+// lockUSSD bir vaqtda bitta USSD bo'lishini ta'minlaydi (yangisi oldingisini bekor qiladi).
+// Bir xil foydalanuvchining barcha pcinfo jarayonlari bitta lock'ni ko'radi.
+func lockUSSD() (func(), error) {
+	dir := fmt.Sprintf(runtimeDirFmt, os.Getuid())
+	if _, err := os.Stat(dir); err != nil {
+		home, herr := os.UserHomeDir()
+		if herr != nil {
+			return nil, fmt.Errorf("USSD lock uchun papka yo'q: %w", err)
+		}
+		dir = home
+	}
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, fmt.Errorf("USSD lock: %w", err)
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		f.Close()
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			return nil, ErrBusy
+		}
+		return nil, fmt.Errorf("USSD lock: %w", err)
+	}
+	return func() { f.Close() }, nil
 }

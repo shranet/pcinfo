@@ -32,6 +32,7 @@ const (
 	sudoBinary      = "/usr/bin/sudo"
 
 	fetchTimeout   = 40 * time.Second
+	sudoWaitDelay  = 3 * time.Second
 	maxOutputBytes = 16 << 20
 	maxStderrBytes = 2 << 10
 
@@ -72,6 +73,10 @@ func (f *Fetcher) Fetch(ctx context.Context) (snapshot.ClaudeSide, error) {
 
 	cmd := exec.CommandContext(ctx, sudoBinary, "-n", "-u", ClaudeUser, "--", f.binary, "collect", "--json")
 	cmd.Env = []string{"PATH=/usr/bin:/bin", "LC_ALL=C"}
+	// SIGTERM'ni sudo bola jarayonga uzatadi. WaitDelay'siz claude o'z collect jarayonini
+	// to'xtatib (SIGSTOP) yoki stdout'ni ochiq ushlab, Run()'ni abadiy kuttirib qo'yishi mumkin edi.
+	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
+	cmd.WaitDelay = sudoWaitDelay
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &capWriter{buf: &stdout, limit: maxOutputBytes}
 	cmd.Stderr = &capWriter{buf: &stderr, limit: maxStderrBytes}

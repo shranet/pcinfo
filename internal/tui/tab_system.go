@@ -25,11 +25,11 @@ const (
 func (m Model) viewSystem() []string {
 	switch {
 	case m.sys.isFailed():
-		return []string{theme.Err.Render("Tizim ma'lumoti o'qilmadi: " + m.sys.err.Error())}
+		return []string{theme.Err.Render("Tizim ma'lumoti o'qilmadi: " + errText(m.sys.err))}
 	case !m.sys.isLoaded:
 		return []string{theme.Muted.Render("Tizim ma'lumoti yuklanmoqda…")}
 	case m.sys.err != nil && m.sys.data.Memory.Total == 0:
-		return []string{theme.Err.Render("Tizim ma'lumoti o'qilmadi: " + m.sys.err.Error())}
+		return []string{theme.Err.Render("Tizim ma'lumoti o'qilmadi: " + errText(m.sys.err))}
 	}
 	s := m.sys.data
 	h := s.Host

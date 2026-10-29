@@ -15,6 +15,7 @@ import (
 	"github.com/shranet/pcinfo/internal/collect/network"
 	"github.com/shranet/pcinfo/internal/collect/process"
 	"github.com/shranet/pcinfo/internal/collect/system"
+	"github.com/shranet/pcinfo/internal/safetext"
 	"github.com/shranet/pcinfo/internal/snapshot"
 	"github.com/shranet/pcinfo/internal/tui/theme"
 )
@@ -30,6 +31,9 @@ const (
 
 	historyLimit = 240
 	wheelStep    = 3
+
+	// ussdHint — Tarmoq tabida footer boshidagi bosiladigan tugma.
+	ussdHint = "[ u — balansni qayta so'rash ]"
 )
 
 type tab int
@@ -147,7 +151,7 @@ type Model struct {
 
 // New modelni yaratadi.
 func New(deps Deps, opts Options) Model {
-	return Model{
+	m := Model{
 		deps:      deps,
 		opts:      opts,
 		now:       time.Now(),
@@ -159,6 +163,12 @@ func New(deps Deps, opts Options) Model {
 		proc:      newProcView(),
 		proj:      projView{expanded: map[string]bool{}},
 	}
+	// Ishga tushishdagi USSD holati shu yerda yoziladi: Init qiymat bo'yicha ishlaydi
+	// va o'zgarishlari saqlanmaydi — aks holda 5 daqiqalik cheklov aylanib o'tilardi.
+	if opts.USSD {
+		m.ussd = ussdState{isRunning: true, startedAt: m.now}
+	}
+	return m
 }
 
 // Init barcha manbalarni birinchi marta so'raydi.
@@ -171,8 +181,8 @@ func (m Model) Init() tea.Cmd {
 		fetchClaude(m.deps.Claude),
 		fetchDocker,
 	}
-	if m.opts.USSD {
-		cmds = append(cmds, m.beginUSSD())
+	if m.ussd.isRunning {
+		cmds = append(cmds, startUSSD(m.deps.Modem))
 	}
 	return tea.Batch(cmds...)
 }
@@ -240,7 +250,7 @@ func (m Model) handleData(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tick(srcProbe, probeInterval)
 	case publicIPMsg:
 		if msg.err != nil {
-			m.publicIPs[msg.iface] = "✗ " + msg.err.Error()
+			m.publicIPs[msg.iface] = "✗ " + errText(msg.err)
 		} else {
 			m.publicIPs[msg.iface] = msg.ip
 		}
@@ -250,9 +260,11 @@ func (m Model) handleData(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tick(srcModem, modemInterval)
 	case claudeMsg:
 		m.claude.set(msg.snap, msg.err, m.now)
+		m.clampLists()
 		return m, tick(srcClaude, claudeInterval)
 	case dockerMsg:
 		m.docker.set(msg.summaries, nil, m.now)
+		m.clampLists()
 		return m, tick(srcDocker, dockerInterval)
 	case ussdStartedMsg:
 		m.ussd.events = msg.events
@@ -358,7 +370,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.dock.navKey(key, len(m.dockerRows()), h)
 	case tabNetwork:
 		if key == "u" {
-			return m, m.beginUSSD()
+			cmd := m.beginUSSD()
+			return m, cmd
 		}
 	}
 	return m, nil
@@ -406,8 +419,9 @@ func (m Model) handleClick(mouse tea.Mouse) (tea.Model, tea.Cmd) {
 			m.dock.clamp(len(m.dockerRows()), h)
 		}
 	case tabNetwork:
-		if mouse.Y == m.height-1 {
-			return m, m.beginUSSD()
+		if mouse.Y == m.height-1 && mouse.X < ansi.StringWidth(ussdHint) {
+			cmd := m.beginUSSD()
+			return m, cmd
 		}
 	}
 	return m, nil
@@ -511,7 +525,7 @@ func (m Model) viewFooter() string {
 	case tabDocker:
 		hints = append([]string{"↑↓ tanlash", "g'ildirak aylantirish"}, hints...)
 	case tabNetwork:
-		hints = append([]string{"[ u — balansni qayta so'rash ]"}, hints...)
+		hints = append([]string{ussdHint}, hints...)
 	}
 	var parts []string
 	for _, h := range hints {
@@ -525,4 +539,16 @@ func cursorMark(isActive bool) string {
 		return "▏"
 	}
 	return ""
+}
+
+// errText — xato matnini terminalga chiqarishga tayyorlaydi: xatolar ichida tashqi
+// manbadan kelgan matn bo'lishi mumkin (modem kodi, git, sudo).
+func errText(err error) string { return safetext.Clean(err.Error()) }
+
+// clampLists yangi ma'lumotdan keyin ro'yxatlar holatini to'g'rilaydi: sichqoncha
+// klikini View chizgan oyna bilan bir xil offset bo'yicha hisoblash uchun.
+func (m *Model) clampLists() {
+	h := m.listHeight()
+	m.proj.list.clamp(len(m.projectRows()), h)
+	m.dock.clamp(len(m.dockerRows()), h)
 }

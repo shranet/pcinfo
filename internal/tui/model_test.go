@@ -260,3 +260,49 @@ func TestClaudeRefreshIsSparseOffTab(t *testing.T) {
 		t.Error("eskirgan ma'lumot so'ralishi kerak")
 	}
 }
+
+func TestStartupUSSDIsTracked(t *testing.T) {
+	m := New(Deps{Modem: modem.New("http://127.0.0.1:1")}, Options{USSD: true})
+	if !m.ussd.isRunning || m.ussd.startedAt.IsZero() {
+		t.Fatal("ishga tushishdagi USSD holati yozilmagan")
+	}
+	m = update(t, m, tea.WindowSizeMsg{Width: testWidth, Height: testHeight})
+	m.tab = tabNetwork
+	if _, cmd := m.Update(key("u")); cmd != nil {
+		t.Error("ishga tushishdagi USSD ishlayotganda u yangisini yubormasligi kerak")
+	}
+	m = update(t, m, ussdDoneMsg{err: errors.New("x")})
+	if _, cmd := m.Update(key("u")); cmd != nil {
+		t.Error("tugagandan keyin ham 5 daqiqa o'tmaguncha yuborilmasligi kerak")
+	}
+}
+
+func TestFooterClickOutsideHintDoesNothing(t *testing.T) {
+	m := newTestModel(t)
+	m.tab = tabNetwork
+	if _, cmd := m.Update(click(testWidth-2, testHeight-1)); cmd != nil {
+		t.Error("footer'ning boshqa joyiga klik USSD yubormasligi kerak")
+	}
+	if _, cmd := m.Update(click(1, testHeight-1)); cmd == nil {
+		t.Error("tugmaga klik USSD yuborishi kerak")
+	}
+}
+
+func TestErrorsAreSanitized(t *testing.T) {
+	m := newTestModel(t)
+	m = update(t, m, modemMsg{err: errors.New("modem xatosi \u009b2J\x1b]0;x\x07")})
+	m.tab = tabNetwork
+	if out := m.render(); strings.Contains(out, "\u009b") || strings.Contains(out, "\x1b]0;") {
+		t.Error("xato matnidagi boshqaruv belgilari ekranga chiqdi")
+	}
+}
+
+func TestListsClampedOnShrink(t *testing.T) {
+	m := newTestModel(t)
+	m.proj.list = listState{cursor: 50, offset: 40}
+	m.dock = listState{cursor: 50, offset: 40}
+	m = update(t, m, claudeMsg{snap: testClaude()})
+	if m.proj.list.offset != 0 || m.dock.offset != 0 {
+		t.Errorf("offset'lar qisqarmagan: %+v %+v", m.proj.list, m.dock)
+	}
+}

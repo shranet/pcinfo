@@ -69,7 +69,7 @@ func (m Model) viewNetwork() []string {
 	lines = append(lines, theme.Heading.Render("Internet liniyalari"))
 	switch {
 	case m.links.isFailed():
-		lines = append(lines, theme.Err.Render("o'qilmadi: "+m.links.err.Error()))
+		lines = append(lines, theme.Err.Render("o'qilmadi: "+errText(m.links.err)))
 	case !m.links.isLoaded:
 		lines = append(lines, theme.Muted.Render("yuklanmoqda…"))
 	case len(m.links.data) == 0:
@@ -151,11 +151,11 @@ func (m Model) modemLines() []string {
 	lines := []string{theme.Heading.Render("USB modem (Huawei HiLink)")}
 	switch {
 	case m.modemInfo.isFailed():
-		return append(lines, theme.Err.Render("  modem javob bermadi: "+m.modemInfo.err.Error()))
+		return append(lines, theme.Err.Render("  modem javob bermadi: "+errText(m.modemInfo.err)))
 	case !m.modemInfo.isLoaded:
 		return append(lines, theme.Muted.Render("  yuklanmoqda…"))
 	case m.modemInfo.err != nil:
-		lines = append(lines, theme.Err.Render("  oxirgi so'rov xatosi: "+m.modemInfo.err.Error()))
+		lines = append(lines, theme.Err.Render("  oxirgi so'rov xatosi: "+errText(m.modemInfo.err)))
 	}
 	info := m.modemInfo.data
 	connStyle := theme.Warn
@@ -196,7 +196,7 @@ func (m Model) ussdLines() []string {
 	case u.isRunning:
 		lines = append(lines, "  "+theme.Warn.Render("⏳ "+stageText(u.progress)))
 	case u.err != nil:
-		lines = append(lines, "  "+theme.Err.Render("✗ xato: "+u.err.Error()))
+		lines = append(lines, "  "+theme.Err.Render("✗ xato: "+errText(u.err)))
 	case !u.doneAt.IsZero():
 		lines = append(lines, "  "+theme.OK.Render("✓ olindi "+format.Ago(u.doneAt, m.now)))
 	case !m.opts.USSD:

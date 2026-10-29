@@ -187,7 +187,7 @@ func (v *procView) selectIndex(i, height int) {
 func (m Model) viewProcess() []string {
 	switch {
 	case m.procs.isFailed():
-		return []string{theme.Err.Render("Jarayonlar o'qilmadi: " + m.procs.err.Error())}
+		return []string{theme.Err.Render("Jarayonlar o'qilmadi: " + errText(m.procs.err))}
 	case !m.procs.isLoaded:
 		return []string{theme.Muted.Render("Jarayonlar yuklanmoqda…")}
 	}

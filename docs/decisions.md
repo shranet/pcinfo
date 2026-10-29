@@ -70,8 +70,9 @@ Holatlar: **TAKLIF** (agent taklif qilgan) → **TASDIQLANGAN** (foydalanuvchi r
 
 ## D-006 · 2026-10-29 · Modem USSD
 - **Qaror:** ishga tushishda fonda bitta `*107#` (`--no-ussd` bilan o'chadi); holatlar ekranda
-  jonli. Bir vaqtda bitta USSD — Linux abstract unix socket lock (`@pcinfo-ussd-lock`),
-  diskka hech narsa yozilmaydi. Bitta jarayon ichida qayta so'rash (`u`) 5 daqiqada bir marta.
+  jonli. Bir vaqtda bitta USSD — foydalanuvchining shaxsiy `/run/user/<uid>` papkasiga
+  `flock` (fayl yaratilmaydi; boshqa foydalanuvchi uni band qila olmaydi — review'da
+  umumiy abstract socket'ni claude egallab olishi mumkinligi topilgan). Bitta jarayon ichida qayta so'rash (`u`) 5 daqiqada bir marta.
 - **O'zgarish:** dastlabki taklifdagi `/run/user/<uid>/pcinfo/ussd.json` keshi olib tashlandi —
   "faqat readonly, ortiqcha yozmasin" talabi.
 - **Ochiq xavf:** pcinfo'ni 5 daqiqa ichida qayta-qayta ochish har safar USSD yuboradi
@@ -81,8 +82,9 @@ Holatlar: **TAKLIF** (agent taklif qilgan) → **TASDIQLANGAN** (foydalanuvchi r
 ## D-007 · 2026-10-29 · Faqat o'qish kafolatlari
 - **Qaror:**
   - Docker: mijozda faqat `GET` (`dockerapi.get`), konteyner ID formati tekshiriladi.
-  - git: `/usr/bin/git --no-optional-locks -c core.fsmonitor=false status`, `GIT_OPTIONAL_LOCKS=0`
-    — indeks qayta yozilmaydi (test tekshiradi).
+  - git: `/usr/bin/git --no-optional-locks -c core.fsmonitor=false status --ignore-submodules=all`,
+    `GIT_OPTIONAL_LOCKS=0`, `GIT_NO_LAZY_FETCH=1`, `GIT_ATTR_SOURCE=<bo'sh daraxt>` — indeks
+    yozilmaydi (test tekshiradi), filtr/submodule/lazy fetch ishga tushmaydi.
   - Fayllar: faqat o'qiladi, hajmi chegaralangan, symlink'larga kirilmaydi.
   - Hech qanday kesh, log yoki vaqtinchalik fayl yozilmaydi.
   - Yagona tashqi o'zgarish — modemga USSD yuborish (talab bo'yicha).

@@ -305,7 +305,7 @@ func repoRow(r projects.Repo) projRow {
 func (m Model) viewProjects() []string {
 	switch {
 	case m.claude.isFailed():
-		return []string{theme.Err.Render("Proyektlar olinmadi: " + m.claude.err.Error())}
+		return []string{theme.Err.Render("Proyektlar olinmadi: " + errText(m.claude.err))}
 	case !m.claude.isLoaded:
 		return []string{theme.Muted.Render("Proyektlar yuklanmoqda (claude tomoni)…")}
 	}
@@ -319,7 +319,7 @@ func (m Model) viewProjects() []string {
 	}
 	if m.claude.err != nil {
 		// Qator qo'shilmaydi: sichqoncha klikida qatorlar siljimasin.
-		head[len(head)-1] = cell{text: "⚠ oxirgi yangilash xatosi: " + m.claude.err.Error(), style: theme.Err}
+		head[len(head)-1] = cell{text: "⚠ oxirgi yangilash xatosi: " + errText(m.claude.err), style: theme.Err}
 	}
 	lines := []string{renderRow(head, m.width, false)}
 	rows := m.projectRows()

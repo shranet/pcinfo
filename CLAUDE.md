@@ -88,7 +88,7 @@ docs/                  spec.md, decisions.md
   tekshiriladi.
 - **Maxfiylik:** `.env`, kalitlar, compose `environment` qiymatlari o'qilmaydi va
   ko'rsatilmaydi (faqat nomlari kerak bo'lsa). Modem cookie/token logga tushmaydi.
-- **Modem:** bir vaqtda bitta USSD (abstract socket lock, diskka yozmasdan), bitta
+- **Modem:** bir vaqtda bitta USSD (`/run/user/<uid>` papkasiga flock, diskka yozmasdan), bitta
   jarayonda 5 daqiqada ko'pi bilan bir marta (D-006).
 - **Imtiyozlar:** TUI shranet sifatida ishlaydi; claude tomoni faqat
   `collect` rejimi orqali, faqat o'qiydi, hech narsani o'zgartirmaydi.
