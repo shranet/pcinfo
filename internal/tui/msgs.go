@@ -23,7 +23,10 @@ const (
 	modemInterval   = 5 * time.Second
 	probeInterval   = 15 * time.Second
 	claudeInterval  = 10 * time.Second
-	dockerInterval  = 10 * time.Second
+	// claudeIdleAge — Proyektlar/Docker tabi ochiq bo'lmasa claude tomoni shunchalik
+	// siyrak so'raladi: har sudo chaqiruvi auth.log va journal'ga yozuv qoldiradi.
+	claudeIdleAge  = time.Minute
+	dockerInterval = 10 * time.Second
 
 	collectTimeout = 15 * time.Second
 	ussdTimeout    = 90 * time.Second

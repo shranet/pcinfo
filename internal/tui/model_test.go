@@ -242,3 +242,21 @@ func TestUSBActiveWarning(t *testing.T) {
 		t.Errorf("status = %q", ansi.Strip(m.viewStatus()))
 	}
 }
+
+func TestClaudeRefreshIsSparseOffTab(t *testing.T) {
+	m := newTestModel(t)
+	m.tab = tabSystem
+	m.claude.at = time.Now()
+	if m.needsClaude() {
+		t.Error("Tizim tabida yangi o'qilgan claude ma'lumoti qayta so'ralmasligi kerak")
+	}
+	m.tab = tabProjects
+	if !m.needsClaude() {
+		t.Error("Proyektlar tabida so'ralishi kerak")
+	}
+	m.tab = tabSystem
+	m.claude.at = time.Now().Add(-2 * claudeIdleAge)
+	if !m.needsClaude() {
+		t.Error("eskirgan ma'lumot so'ralishi kerak")
+	}
+}

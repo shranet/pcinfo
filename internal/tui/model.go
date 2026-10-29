@@ -193,6 +193,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		return m.handleWheel(msg.Mouse())
 	case tickMsg:
+		if msg.src == srcClaude && !m.needsClaude() {
+			return m, tick(srcClaude, claudeInterval)
+		}
 		return m, m.fetch(msg.src)
 	}
 	return m.handleData(msg)
@@ -291,6 +294,12 @@ func (m Model) applyLinks(msg linksMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, tea.Batch(cmds...)
+}
+
+// needsClaude — claude tomonini hozir yangilash kerakmi: u ko'rinib turgan tabda
+// yoki oxirgi o'qishdan beri claudeIdleAge o'tgan bo'lsa.
+func (m Model) needsClaude() bool {
+	return m.tab == tabProjects || m.tab == tabDocker || m.now.Sub(m.claude.at) >= claudeIdleAge
 }
 
 // probeIfaces — internetga chiqadigan (default route'li) liniyalar.
