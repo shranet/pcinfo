@@ -55,3 +55,27 @@ func TestLiveRender(t *testing.T) {
 		fmt.Println(ansi.Strip(m.render()))
 	}
 }
+
+// TestLiveUSSD haqiqiy modemga bitta *107# yuboradi. Faqat qo'lda va kamdan-kam:
+// PCINFO_LIVE_USSD=1 (operator tez-tez so'rovni cheklashi mumkin).
+func TestLiveUSSD(t *testing.T) {
+	if os.Getenv("PCINFO_LIVE_USSD") == "" {
+		t.Skip("PCINFO_LIVE_USSD=1 bilan ishga tushiring")
+	}
+	msg := startUSSD(modem.New(modem.DefaultBaseURL))()
+	events := msg.(ussdStartedMsg).events
+	for ev := range events {
+		switch e := ev.(type) {
+		case ussdProgressMsg:
+			fmt.Println("bosqich:", stageText(e.progress))
+		case ussdDoneMsg:
+			if e.err != nil {
+				t.Fatal(e.err)
+			}
+			fmt.Printf("natija: %+v\n", e.balance)
+			if e.balance.MB != nil {
+				fmt.Println("MB:", *e.balance.MB)
+			}
+		}
+	}
+}
